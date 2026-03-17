@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Cost Estimator | JDiDev7 Tools</title>
+    <meta name="description" content="Calculadora de costes para la CLI de Claude Code. Estima tus tokens y gasto en la API de Anthropic gratis.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');
+        body { font-family: 'Fira Code', monospace; }
+        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(10px); }
+        .neon-border { border: 1px solid rgba(249, 115, 22, 0.2); }
+        input:focus, select:focus { border-color: #f97316 !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.2); }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-300 min-h-screen flex flex-col p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto w-full flex-grow">
+        <header class="mb-12 text-center">
+            <div class="inline-block bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-orange-500/20">
+                v1.0 Stable Release
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tighter text-white">
+                <span class="text-orange-500 italic">JDi</span>Dev7 <span class="text-zinc-600 font-light">Estimator</span>
+            </h1>
+            <p class="text-zinc-500 text-sm md:text-base max-w-md mx-auto">
+                Controla el consumo de tokens de tu CLI de Anthropic antes de que llegue la factura.
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass p-6 rounded-2xl neon-border">
+                    <h2 class="text-orange-500 font-bold mb-6 flex items-center gap-2 text-sm uppercase tracking-widest">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                        Parámetros del Proyecto
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Líneas de Código Totales (LOC)</label>
+                            <input type="number" id="loc" 
+                                class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-orange-400 outline-none transition-all" 
+                                value="5000" placeholder="Ej: 5000">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Modelo Claude</label>
+                                <select id="model" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="3.00">Claude 3.5 Sonnet ($3/1M)</option>
+                                    <option value="0.25">Claude 3.5 Haiku ($0.25/1M)</option>
+                                    <option value="15.00">Claude 3 Opus ($15/1M)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Tipo de Tarea</label>
+                                <select id="complexity" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="1.2">Consulta Rápida (Scan ligero)</option>
+                                    <option value="3.5">Refactor de Archivos (Scan profundo)</option>
+                                    <option value="8.0">Arquitectura Nueva (Múltiples pasadas)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-l-2 border-orange-500/30 bg-orange-500/5 text-xs text-zinc-400 leading-relaxed italic">
+                    Tip de JDiDev7: Usa un archivo .claudeignore para excluir carpetas como /node_modules y reducir drásticamente el coste por scan.
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-orange-600 p-8 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_0_30px_rgba(234,88,12,0.2)]">
+                    <span class="text-orange-200 text-xs font-bold uppercase tracking-tighter mb-2">Coste Estimado</span>
+                    <div class="flex items-start">
+                        <span class="text-2xl mt-1">$</span>
+                        <span id="totalCost" class="text-6xl font-black tracking-tighter">0.00</span>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl border border-zinc-800 space-y-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Tokens de Entrada:</span>
+                        <span id="inputTokens" class="text-orange-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Ahorro con Caché:</span>
+                        <span class="text-green-500 font-bold">Hasta 90%</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-16 border-t border-zinc-900 pt-10 pb-10 prose prose-invert max-w-none">
+            <h2 class="text-2xl font-bold text-white mb-4 italic">¿Cómo funciona Claude Code?</h2>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+                Claude Code es la nueva interfaz de línea de comandos (CLI) de Anthropic que permite a los desarrolladores interactuar con su base de código directamente. Sin embargo, al procesar archivos locales, el consumo de tokens puede escalar rápidamente. 
+            </p>
+            <p class="text-zinc-400 text-sm leading-relaxed">
+                Esta herramienta gratuita de <strong>JDiDev7</strong> utiliza algoritmos de estimación basados en la densidad media de tokens por línea de código (LOC) para ayudarte a presupuestar tus sesiones de desarrollo.
+            </p>
+        </section>
+    </div>
+
+    <footer class="mt-auto border-t border-zinc-900 py-8 text-center">
+        <p class="text-zinc-600 text-[10px] uppercase tracking-[0.2em] mb-2">
+            Independent Developer Tool • 2026
+        </p>
+        <p class="text-zinc-400 text-xs font-bold">
+            © JDiDev7 Labs
+        </p>
+    </footer>
+
+    <script>
+        const locInput = document.getElementById('loc');
+        const modelSelect = document.getElementById('model');
+        const compSelect = document.getElementById('complexity');
+
+        function calculate() {
+            const loc = parseInt(locInput.value) || 0;
+            const pricePerMillion = parseFloat(modelSelect.value);
+            const multiplier = parseFloat(compSelect.value);
+
+            // 1 línea de código ≈ 42 tokens promedio (incluye indentación y comentarios)
+            const tokens = Math.ceil(loc * 42 * multiplier);
+            const cost =<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Cost Estimator | JDiDev7 Tools</title>
+    <meta name="description" content="Calculadora de costes para la CLI de Claude Code. Estima tus tokens y gasto en la API de Anthropic gratis.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');
+        body { font-family: 'Fira Code', monospace; }
+        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(10px); }
+        .neon-border { border: 1px solid rgba(249, 115, 22, 0.2); }
+        input:focus, select:focus { border-color: #f97316 !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.2); }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-300 min-h-screen flex flex-col p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto w-full flex-grow">
+        <header class="mb-12 text-center">
+            <div class="inline-block bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-orange-500/20">
+                v1.0 Stable Release
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tighter text-white">
+                <span class="text-orange-500 italic">JDi</span>Dev7 <span class="text-zinc-600 font-light">Estimator</span>
+            </h1>
+            <p class="text-zinc-500 text-sm md:text-base max-w-md mx-auto">
+                Controla el consumo de tokens de tu CLI de Anthropic antes de que llegue la factura.
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass p-6 rounded-2xl neon-border">
+                    <h2 class="text-orange-500 font-bold mb-6 flex items-center gap-2 text-sm uppercase tracking-widest">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                        Parámetros del Proyecto
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Líneas de Código Totales (LOC)</label>
+                            <input type="number" id="loc" 
+                                class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-orange-400 outline-none transition-all" 
+                                value="5000" placeholder="Ej: 5000">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Modelo Claude</label>
+                                <select id="model" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="3.00">Claude 3.5 Sonnet ($3/1M)</option>
+                                    <option value="0.25">Claude 3.5 Haiku ($0.25/1M)</option>
+                                    <option value="15.00">Claude 3 Opus ($15/1M)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Tipo de Tarea</label>
+                                <select id="complexity" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="1.2">Consulta Rápida (Scan ligero)</option>
+                                    <option value="3.5">Refactor de Archivos (Scan profundo)</option>
+                                    <option value="8.0">Arquitectura Nueva (Múltiples pasadas)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-l-2 border-orange-500/30 bg-orange-500/5 text-xs text-zinc-400 leading-relaxed italic">
+                    Tip de JDiDev7: Usa un archivo .claudeignore para excluir carpetas como /node_modules y reducir drásticamente el coste por scan.
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-orange-600 p-8 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_0_30px_rgba(234,88,12,0.2)]">
+                    <span class="text-orange-200 text-xs font-bold uppercase tracking-tighter mb-2">Coste Estimado</span>
+                    <div class="flex items-start">
+                        <span class="text-2xl mt-1">$</span>
+                        <span id="totalCost" class="text-6xl font-black tracking-tighter">0.00</span>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl border border-zinc-800 space-y-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Tokens de Entrada:</span>
+                        <span id="inputTokens" class="text-orange-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Ahorro con Caché:</span>
+                        <span class="text-green-500 font-bold">Hasta 90%</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-16 border-t border-zinc-900 pt-10 pb-10 prose prose-invert max-w-none">
+            <h2 class="text-2xl font-bold text-white mb-4 italic">¿Cómo funciona Claude Code?</h2>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+                Claude Code es la nueva interfaz de línea de comandos (CLI) de Anthropic que permite a los desarrolladores interactuar con su base de código directamente. Sin embargo, al procesar archivos locales, el consumo de tokens puede escalar rápidamente. 
+            </p>
+            <p class="text-zinc-400 text-sm leading-relaxed">
+                Esta herramienta gratuita de <strong>JDiDev7</strong> utiliza algoritmos de estimación basados en la densidad media de tokens por línea de código (LOC) para ayudarte a presupuestar tus sesiones de desarrollo.
+            </p>
+        </section>
+    </div>
+
+    <footer class="mt-auto border-t border-zinc-900 py-8 text-center">
+        <p class="text-zinc-600 text-[10px] uppercase tracking-[0.2em] mb-2">
+            Independent Developer Tool • 2026
+        </p>
+        <p class="text-zinc-400 text-xs font-bold">
+            © JDiDev7 Labs
+        </p>
+    </footer>
+
+    <script>
+        const locInput = document.getElementById('loc');
+        const modelSelect = document.getElementById('model');
+        const compSelect = document.getElementById('complexity');
+
+        function calculate() {
+            const loc = parseInt(locInput.value) || 0;
+            const pricePerMillion = parseFloat(modelSelect.value);
+            const multiplier = parseFloat(compSelect.value);
+
+            // 1 línea de código ≈ 42 tokens promedio (incluye indentación y comentarios)
+            const tokens = Math.ceil(loc * 42 * multiplier);
+            const cost =<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Cost Estimator | JDiDev7 Tools</title>
+    <meta name="description" content="Calculadora de costes para la CLI de Claude Code. Estima tus tokens y gasto en la API de Anthropic gratis.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');
+        body { font-family: 'Fira Code', monospace; }
+        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(10px); }
+        .neon-border { border: 1px solid rgba(249, 115, 22, 0.2); }
+        input:focus, select:focus { border-color: #f97316 !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.2); }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-300 min-h-screen flex flex-col p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto w-full flex-grow">
+        <header class="mb-12 text-center">
+            <div class="inline-block bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full text-xs font-bold mb-4 border border-orange-500/20">
+                v1.0 Stable Release
+            </div>
+            <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tighter text-white">
+                <span class="text-orange-500 italic">JDi</span>Dev7 <span class="text-zinc-600 font-light">Estimator</span>
+            </h1>
+            <p class="text-zinc-500 text-sm md:text-base max-w-md mx-auto">
+                Controla el consumo de tokens de tu CLI de Anthropic antes de que llegue la factura.
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div class="lg:col-span-3 space-y-6">
+                <div class="glass p-6 rounded-2xl neon-border">
+                    <h2 class="text-orange-500 font-bold mb-6 flex items-center gap-2 text-sm uppercase tracking-widest">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+                        Parámetros del Proyecto
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Líneas de Código Totales (LOC)</label>
+                            <input type="number" id="loc" 
+                                class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-orange-400 outline-none transition-all" 
+                                value="5000" placeholder="Ej: 5000">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Modelo Claude</label>
+                                <select id="model" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="3.00">Claude 3.5 Sonnet ($3/1M)</option>
+                                    <option value="0.25">Claude 3.5 Haiku ($0.25/1M)</option>
+                                    <option value="15.00">Claude 3 Opus ($15/1M)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Tipo de Tarea</label>
+                                <select id="complexity" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
+                                    <option value="1.2">Consulta Rápida (Scan ligero)</option>
+                                    <option value="3.5">Refactor de Archivos (Scan profundo)</option>
+                                    <option value="8.0">Arquitectura Nueva (Múltiples pasadas)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-l-2 border-orange-500/30 bg-orange-500/5 text-xs text-zinc-400 leading-relaxed italic">
+                    Tip de JDiDev7: Usa un archivo .claudeignore para excluir carpetas como /node_modules y reducir drásticamente el coste por scan.
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-orange-600 p-8 rounded-2xl flex flex-col items-center justify-center text-white shadow-[0_0_30px_rgba(234,88,12,0.2)]">
+                    <span class="text-orange-200 text-xs font-bold uppercase tracking-tighter mb-2">Coste Estimado</span>
+                    <div class="flex items-start">
+                        <span class="text-2xl mt-1">$</span>
+                        <span id="totalCost" class="text-6xl font-black tracking-tighter">0.00</span>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl border border-zinc-800 space-y-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Tokens de Entrada:</span>
+                        <span id="inputTokens" class="text-orange-400 font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-zinc-500 font-semibold italic">Ahorro con Caché:</span>
+                        <span class="text-green-500 font-bold">Hasta 90%</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-16 border-t border-zinc-900 pt-10 pb-10 prose prose-invert max-w-none">
+            <h2 class="text-2xl font-bold text-white mb-4 italic">¿Cómo funciona Claude Code?</h2>
+            <p class="text-zinc-400 text-sm leading-relaxed mb-4">
+                Claude Code es la nueva interfaz de línea de comandos (CLI) de Anthropic que permite a los desarrolladores interactuar con su base de código directamente. Sin embargo, al procesar archivos locales, el consumo de tokens puede escalar rápidamente. 
+            </p>
+            <p class="text-zinc-400 text-sm leading-relaxed">
+                Esta herramienta gratuita de <strong>JDiDev7</strong> utiliza algoritmos de estimación basados en la densidad media de tokens por línea de código (LOC) para ayudarte a presupuestar tus sesiones de desarrollo.
+            </p>
+        </section>
+    </div>
+
+    <footer class="mt-auto border-t border-zinc-900 py-8 text-center">
+        <p class="text-zinc-600 text-[10px] uppercase tracking-[0.2em] mb-2">
+            Independent Developer Tool • 2026
+        </p>
+        <p class="text-zinc-400 text-xs font-bold">
+            © JDiDev7 Labs
+        </p>
+    </footer>
+
+    <script>
+        const locInput = document.getElementById('loc');
+        const modelSelect = document.getElementById('model');
+        const compSelect = document.getElementById('complexity');
+
+        function calculate() {
+            const loc = parseInt(locInput.value) || 0;
+            const pricePerMillion = parseFloat(modelSelect.value);
+            const multiplier = parseFloat(compSelect.value);
+
+            // 1 línea de código ≈ 42 tokens promedio (incluye indentación y comentarios)
+            const tokens = Math.ceil(loc * 42 * multiplier);
+            const cost =
