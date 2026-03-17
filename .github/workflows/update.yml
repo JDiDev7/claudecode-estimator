@@ -1,12 +1,14 @@
 name: JDiDev7 Price Autoupdate
 on:
   schedule:
-    - cron: '0 0 * * 1' # Todos los lunes a medianoche
-  workflow_dispatch: # Botón para ejecutarlo tú cuando quieras
+    - cron: '0 0 * * 1' # Se ejecutará solo todos los lunes
+  workflow_dispatch: # ESTO es lo que nos permite darle al botón "Play" a mano
 
 jobs:
   update-prices:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # IMPORTANTE: Para que el bot pueda escribir en tu repo
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
@@ -16,9 +18,6 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Instalar dependencias
-        run: pip install requests beautifulsoup4
-
       - name: Ejecutar Scraper
         run: python scraper.py
 
@@ -27,5 +26,5 @@ jobs:
           git config --global user.name 'JDiDev7-Bot'
           git config --global user.email 'bot@jdi-dev.com'
           git add prices.json
-          git commit -m "🤖 Bot: Modelos y precios actualizados" || echo "Sin cambios"
+          git commit -m "🤖 Bot: Modelos actualizados" || echo "Sin cambios"
           git push
