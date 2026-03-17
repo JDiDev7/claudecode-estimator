@@ -1,0 +1,8 @@
+{
+  "last_update": "2026-03-17",
+  "models": [
+    {"id": "claude-4-6-sonnet", "name": "Claude 4.6 Sonnet", "price": 2.50},
+    {"id": "claude-3-7-sonnet", "name": "Claude 3.7 Sonnet", "price": 3.00},
+    {"id": "claude-3-5-haiku", "name": "Claude 3.5 Haiku", "price": 0.25}
+  ]
+}
