@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +9,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap');
-        body { font-family: 'Fira Code', monospace; }
-        .glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(10px); }
-        .neon-border { border: 1px solid rgba(249, 115, 22, 0.2); }
-        input:focus, select:focus { border-color: #f97316 !important; box-shadow: 0 0 10px rgba(249, 115, 22, 0.2); }
+
+        body {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .glass {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .neon-border {
+            border: 1px solid rgba(249, 115, 22, 0.2);
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #f97316 !important;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.2);
+        }
     </style>
 </head>
+
 <body class="bg-[#09090b] text-zinc-300 min-h-screen flex flex-col p-4 md:p-8">
 
     <div class="max-w-4xl mx-auto w-full flex-grow">
@@ -45,10 +62,7 @@
                             <div>
                                 <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Modelo Claude</label>
                                 <select id="model" class="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-xl text-zinc-300 outline-none cursor-pointer">
-                                    <option value="3.00">Claude 3.5 Sonnet ($3/1M)</option>
-                                    <option value="0.25">Claude 3.5 Haiku ($0.25/1M)</option>
-                                    <option value="15.00">Claude 3 Opus ($15/1M)</option>
-                                </select>
+                                    </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Tipo de Tarea</label>
@@ -89,16 +103,54 @@
     </footer>
 
     <script>
-        async function loadPrices() {
-            const response = await fetch('./prices.json');
-            const data = await response.json();
-            const select = document.getElementById('model');
-            
-            select.innerHTML = data.models.map(m => 
-                `<option value="${m.price}">${m.name} ($${m.price}/1M)</option>`
-            ).join('');
+        const locInput = document.getElementById('loc');
+        const modelSelect = document.getElementById('model');
+        const compSelect = document.getElementById('complexity');
+
+        function calculate() {
+            const loc = parseInt(locInput.value) || 0;
+            const pricePerMillion = parseFloat(modelSelect.value) || 0;
+            const multiplier = parseFloat(compSelect.value) || 1;
+
+            // 1 línea de código ≈ 45 tokens promedio para Claude Code
+            const tokens = Math.ceil(loc * 45 * multiplier);
+            const cost = (tokens / 1000000) * pricePerMillion;
+
+            document.getElementById('inputTokens').innerText = tokens.toLocaleString();
+            document.getElementById('totalCost').innerText = cost.toFixed(2);
         }
-        loadPrices();
+
+        async function initJDiDev7() {
+            try {
+                const response = await fetch('./prices.json');
+                const data = await response.json();
+
+                modelSelect.innerHTML = ""; // Limpiar el select antes de rellenar
+
+                data.models.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.price;
+                    opt.textContent = `${m.name} ($${m.price}/1M)`;
+                    modelSelect.appendChild(opt);
+                });
+
+                console.log("Precios actualizados el: " + data.last_update);
+            } catch (e) {
+                console.error("Error cargando precios, cargando valores por defecto...");
+                modelSelect.innerHTML = '<option value="3.00">Claude 3.5 Sonnet ($3/1M)</option>';
+            }
+            // Ejecutar el primer cálculo tras cargar los modelos
+            calculate();
+        }
+
+        // Listeners para los inputs
+        [locInput, modelSelect, compSelect].forEach(el => {
+            el.addEventListener('input', calculate);
+        });
+
+        // Inicio de la aplicación
+        initJDiDev7();
     </script>
 </body>
+
 </html>
