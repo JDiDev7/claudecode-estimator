@@ -89,23 +89,16 @@
     </footer>
 
     <script>
-        const locInput = document.getElementById('loc');
-        const modelSelect = document.getElementById('model');
-        const compSelect = document.getElementById('complexity');
-
-        function calculate() {
-            const loc = parseInt(locInput.value) || 0;
-            const price = parseFloat(modelSelect.value);
-            const mult = parseFloat(compSelect.value);
-            const tokens = Math.ceil(loc * 42 * mult);
-            const cost = (tokens / 1000000) * price;
-
-            document.getElementById('inputTokens').innerText = tokens.toLocaleString();
-            document.getElementById('totalCost').innerText = cost.toFixed(2);
+        async function loadPrices() {
+            const response = await fetch('./prices.json');
+            const data = await response.json();
+            const select = document.getElementById('model');
+            
+            select.innerHTML = data.models.map(m => 
+                `<option value="${m.price}">${m.name} ($${m.price}/1M)</option>`
+            ).join('');
         }
-
-        [locInput, modelSelect, compSelect].forEach(el => el.addEventListener('input', calculate));
-        calculate();
+        loadPrices();
     </script>
 </body>
 </html>
